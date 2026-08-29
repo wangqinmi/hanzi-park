@@ -1,0 +1,2 @@
+rootProject.name = 'hanzi-park'
+include ':app'

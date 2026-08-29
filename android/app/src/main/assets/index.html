@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>汉字乐园 · 幼儿识字120</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐼</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="clouds">
+    <div class="cloud c1"><svg viewBox="0 0 200 100"><path d="M40 78q-26-4-26-32 0-24 26-26 8-22 34-20 22 2 32 18 26 2 26 28 0 24-26 24z" fill="#fff"/></svg></div>
+    <div class="cloud c2"><svg viewBox="0 0 200 100"><path d="M40 78q-26-4-26-32 0-24 26-26 8-22 34-20 22 2 32 18 26 2 26 28 0 24-26 24z" fill="#fff" opacity=".9"/></svg></div>
+    <div class="cloud c3"><svg viewBox="0 0 200 100"><path d="M40 78q-26-4-26-32 0-24 26-26 8-22 34-20 22 2 32 18 26 2 26 28 0 24-26 24z" fill="#fff" opacity=".8"/></svg></div>
+  </div>
+  <div class="ground"></div>
+
+  <div id="app">
+    <div class="topbar">
+      <span class="logo">🐼</span>
+      <h1>汉字乐园</h1>
+      <div class="star-pill"><span>⭐</span><span id="star-count">0</span></div>
+      <button class="home-btn" id="btn-home-top" title="回首页">🏠</button>
+    </div>
+
+    <!-- 首页 -->
+    <section id="view-home">
+      <div class="hero">
+        <div class="mascot-row">
+          <div class="m" id="hero-m1"></div><div class="m" id="hero-m2"></div>
+          <div class="m" id="hero-m3"></div><div class="m" id="hero-m4"></div>
+        </div>
+        <div class="welcome" id="welcome-text">小朋友你好呀！快来一起认汉字吧～</div>
+        <div class="progress-wrap">
+          <div class="lbl">📖 识字进度：<span id="progress-text">0</span> / 120</div>
+          <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+        </div>
+      </div>
+      <nav class="big-menu">
+        <button class="menu-card mc-a" data-nav="school"><span class="big">🎓</span><div><div class="ttl">识字学堂</div><div class="sub">学读 · 学写 · 懂意思</div></div></button>
+        <button class="menu-card mc-b" data-nav="picto"><span class="big">🖼️</span><div><div class="ttl">图画变变变</div><div class="sub">趣味方法① 看图联想识字</div></div></button>
+        <button class="menu-card mc-c" data-nav="games"><span class="big">🎮</span><div><div class="ttl">闯关大冒险</div><div class="sub">趣味方法② 玩游戏学汉字</div></div></button>
+        <button class="menu-card mc-d" data-nav="achieve"><span class="big">🏆</span><div><div class="ttl">我的成就</div><div class="sub">星星徽章领不停</div></div></button>
+      </nav>
+    </section>
+
+    <!-- 识字学堂 -->
+    <section id="view-school" class="hidden">
+      <div class="cat-tabs" id="cat-tabs"></div>
+      <div class="char-grid" id="char-grid"></div>
+    </section>
+
+    <!-- 方法一：图画变变变 -->
+    <section id="view-picto" class="hidden">
+      <div class="game-tabs">
+        <button class="game-card" data-picto-tab="look" style="background:linear-gradient(160deg,#6DD5FA,#54A0FF)">🔍 看图认字</button>
+        <button class="game-card" data-picto-tab="evolve" style="background:linear-gradient(160deg,#F78FB3,#E84393)">✨ 象形变变变</button>
+      </div>
+      <div class="game-area">
+        <div id="picto-look">
+          <div class="game-q" id="pl-question">看图片，哪个汉字和它是一对好朋友？</div>
+          <div style="text-align:center"><span class="game-big-pic" id="pl-pic">🐟</span></div>
+          <div class="opt-grid" id="pl-opts"></div>
+          <div class="score-line">
+            <span class="score-pill">✅ 答对 <b id="pl-score">0</b></span>
+            <span class="score-pill">⭐ 星星 <b id="pl-stars">0</b></span>
+          </div>
+        </div>
+        <div id="picto-evolve" class="hidden">
+          <div class="game-q">点一点卡片，看看图画怎么变成汉字！</div>
+          <div class="cat-tabs" id="evolve-chips"></div>
+          <div class="evolve-row">
+            <div class="evolve-stage" id="ev-stage1">🐟</div>
+            <div class="evolve-arrow">➜</div>
+            <div class="evolve-stage" id="ev-stage2"></div>
+            <div class="evolve-arrow">➜</div>
+            <div class="evolve-stage zi" id="ev-stage3">鱼</div>
+          </div>
+          <div class="tip-line" style="text-align:center;margin-top:12px" id="ev-tip">鱼儿摆尾水里游</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 方法二：闯关大冒险 -->
+    <section id="view-games" class="hidden">
+      <div class="game-tabs">
+        <button class="game-card" data-game="pair" style="background:linear-gradient(160deg,#FDCB6E,#F39C12)">🔗 连连看</button>
+        <button class="game-card" data-game="memory" style="background:linear-gradient(160deg,#A29BFE,#6C5CE7)">🎴 翻翻乐</button>
+        <button class="game-card" data-game="find" style="background:linear-gradient(160deg,#55EFC4,#00B894)">🔎 找朋友</button>
+      </div>
+      <div class="game-area">
+        <div id="game-pair">
+          <div class="game-q">点一个图片，再点它对应的汉字，连成一对！</div>
+          <div class="pair-grid" id="pair-grid"></div>
+          <div class="score-line"><span class="score-pill">⭐ 星星 <b id="pair-stars">0</b></span></div>
+        </div>
+        <div id="game-memory" class="hidden">
+          <div class="game-q">翻两张牌，找到一样的图片和汉字！</div>
+          <div class="pair-grid" id="mem-grid"></div>
+          <div class="score-line"><span class="score-pill">⭐ 星星 <b id="mem-stars">0</b></span></div>
+        </div>
+        <div id="game-find" class="hidden">
+          <div class="game-q" id="gf-question">这个字读什么？找一找它的图片朋友！</div>
+          <div style="text-align:center"><span class="game-big-zi" id="gf-zi">鱼</span></div>
+          <div class="opt-grid" id="gf-opts"></div>
+          <div class="score-line">
+            <span class="score-pill">✅ 答对 <b id="gf-score">0</b></span>
+            <span class="score-pill">⭐ 星星 <b id="gf-stars">0</b></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 我的成就 -->
+    <section id="view-achieve" class="hidden">
+      <div class="game-area">
+        <div class="game-q">🌟 我的荣誉墙</div>
+        <div class="badges" id="badge-list"></div>
+        <div class="game-q" style="margin-top:20px">📖 我学会的字</div>
+        <div class="learned-grid" id="learned-grid"></div>
+        <div class="write-actions">
+          <button class="big-btn gray" id="btn-reset">🔄 重新开始</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 汉字详情弹层 -->
+  <div class="overlay hidden" id="char-overlay">
+    <div class="sheet" id="char-sheet">
+      <button class="close" id="btn-close-sheet">✕</button>
+      <div class="char-hero">
+        <div class="pic-frame" id="cd-pic">🐟</div>
+        <div class="main">
+          <div class="zi-big" id="cd-zi">鱼</div>
+          <div class="py-big" id="cd-py">yú</div>
+          <div class="picat" id="cd-cat">动物朋友</div>
+        </div>
+      </div>
+      <div class="fn-row">
+        <button class="fn-btn fn-read" id="btn-read">🔊 听一听</button>
+        <button class="fn-btn fn-write" id="btn-write">✍️ 学写字</button>
+        <button class="fn-btn fn-mean" id="btn-mean">💡 字的意思</button>
+      </div>
+      <div id="cd-evolve"></div>
+      <div class="info-card" id="cd-mean-card">
+        <h3>💡 这个字是什么意思？</h3>
+        <div class="meaning" id="cd-meaning"></div>
+        <div class="word-chips" id="cd-words"></div>
+        <div class="sentence" id="cd-sentence"></div>
+        <div class="tip-line" id="cd-tip"></div>
+      </div>
+      <div class="info-card hidden" id="cd-write-card">
+        <h3>✍️ 跟着学写字</h3>
+        <div class="write-tabs">
+          <button class="write-tab active" data-wtab="demo">▶️ 看演示</button>
+          <button class="write-tab" data-wtab="trace">🖍️ 描一描</button>
+          <button class="write-tab" data-wtab="free">🎨 自由画</button>
+        </div>
+        <div class="write-box"><canvas id="write-canvas" width="320" height="320"></canvas></div>
+        <div class="write-hint" id="write-hint">点"看演示"，看看这个字怎么写～</div>
+        <div class="write-actions">
+          <button class="big-btn blue" id="btn-replay">🔁 再看一遍</button>
+          <button class="big-btn green" id="btn-quiz">✅ 我会写了</button>
+        </div>
+      </div>
+      <button class="learned-btn" id="btn-learned">⭐ 学会这个字啦！</button>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <script src="js/data.js"></script>
+  <script src="js/mascots.js"></script>
+  <script src="js/strokes.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

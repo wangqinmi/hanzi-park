@@ -1,0 +1,13 @@
+# 构建工具链（体积巨大）
+build/toolchain/
+# 第三方依赖
+build/cnchar-check/node_modules/
+build/cnchar-check/npm-cache/
+build/cnchar-check/package-lock.json
+# 无头浏览器测试产生的临时配置
+build/chrome-profile*/
+# 日志与测试截图
+build/*.log
+build/shots/
+# 系统文件
+.DS_Store
