@@ -88,6 +88,9 @@ class CDP {
   check('找到 月 字卡', hasCard);
   await ev("document.querySelector('.char-card[data-ch=\\\"月\\\"]').click()");
   await sleep(400);
+  const twemoji = await ev("JSON.stringify({src: document.querySelector('#cd-pic2-img').getAttribute('src'), loaded: document.querySelector('#cd-pic2-img').naturalWidth > 0, emoji: document.querySelector('#cd-pic .pic-inner').textContent})");
+  const tw = JSON.parse(twemoji || '{}');
+  check('第二张图已加载（Twemoji矢量图）', tw.loaded === true && (tw.src || '').indexOf('twemoji') >= 0, JSON.stringify(tw));
   const strokesOf = await ev("window.HANZI_STROKES['月'].strokes.length");
   check('月 有4笔', strokesOf === 4, '实际' + strokesOf);
   const medRange = await ev("(function(){var m=window.HANZI_STROKES['月'].medians[0];var mx=0;for(var i=0;i<m.length;i++){mx=Math.max(mx,m[i][0],m[i][1]);}return mx;})()");

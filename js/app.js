@@ -142,6 +142,8 @@
       return true;
     } catch (e) { return false; }
   }
+  // 第二张插图（Twemoji 矢量图，ASCII 文件名）
+  const twImg = ch => 'img/twemoji/u' + ch.codePointAt(0).toString(16) + '.svg';
   const readText = ch => ch + '。' + CD[ch].w[0] + '的' + ch + '。' + ch + '，' + CD[ch].w[0] + '的' + ch;
   const readChar = ch => speak(readText(ch));
   // APK：预合成语音进缓存，点按秒读
@@ -232,7 +234,9 @@
     curChar = ch;
     const d = CD[ch];
     const cat = CATS.find(c => c.chars.includes(ch));
-    $('#cd-pic').textContent = d.e;
+    $('#cd-pic').querySelector('.pic-inner').textContent = d.e;
+    $('#cd-pic2-img').src = twImg(ch);
+    $('#cd-pic2-img').alt = d.w[0];
     $('#cd-zi').textContent = ch;
     $('#cd-py').textContent = d.p;
     $('#cd-cat').textContent = cat.icon + ' ' + cat.name + ' · 共' + strokesOf(ch) + '画';
@@ -260,7 +264,7 @@
     const ev = $('#cd-evolve');
     if (PICTO[ch]) {
       ev.innerHTML = '<div class="evolve"><h3>✨ 图画变汉字：点一点每一格</h3><div class="evolve-row">' +
-        '<div class="evolve-stage" data-ev="1">' + d.e + '</div><div class="evolve-arrow">➜</div>' +
+        '<div class="evolve-stage" data-ev="1"><img src="' + twImg(ch) + '" style="width:66px;height:66px"></div><div class="evolve-arrow">➜</div>' +
         '<div class="evolve-stage" data-ev="2"><svg viewBox="0 0 120 120">' + PICTO[ch] + '</svg></div><div class="evolve-arrow">➜</div>' +
         '<div class="evolve-stage zi" data-ev="3">' + ch + '</div></div></div>';
       ev.querySelectorAll('.evolve-stage').forEach(s => s.addEventListener('click', () => {
@@ -268,7 +272,7 @@
         ev.querySelectorAll('.evolve-stage').forEach(x => x.classList.remove('active'));
         s.classList.add('active');
         const n = +s.dataset.ev;
-        speak(n === 1 ? d.e : n === 2 ? ch + '的古时候画像' : ch + '。' + d.w[0] + '的' + ch, 0.72);
+        speak(n === 1 ? d.w[0] : n === 2 ? ch + '的古时候画像' : ch + '。' + d.w[0] + '的' + ch, 0.72);
       }));
     } else ev.innerHTML = '';
     // 学会按钮
@@ -727,7 +731,10 @@
     const idx = Math.floor(Math.random() * plPool.length);
     const ch = plPool.splice(idx, 1)[0];
     plRight = ch;
-    $('#pl-pic').textContent = CD[ch].e;
+    const useTw = Math.random() < 0.5;
+    $('#pl-pic').innerHTML = useTw
+      ? '<img src="' + twImg(ch) + '" style="width:88px;height:88px;vertical-align:middle">'
+      : CD[ch].e;
     $('#pl-pic').style.animation = 'none'; void $('#pl-pic').offsetWidth;
     $('#pl-pic').style.animation = 'pop .5s';
     const others = ALL.filter(x => x !== ch).sort(() => Math.random() - .5).slice(0, 3);
@@ -771,7 +778,7 @@
   }
   function evShow(ch) {
     const d = CD[ch];
-    $('#ev-stage1').textContent = d.e;
+    $('#ev-stage1').innerHTML = '<img src="' + twImg(ch) + '" style="width:66px;height:66px">';
     $('#ev-stage2').innerHTML = '<svg viewBox="0 0 120 120">' + PICTO[ch] + '</svg>';
     $('#ev-stage3').textContent = ch;
     $('#ev-tip').textContent = '🎵 记忆口诀：' + d.t;
@@ -782,7 +789,7 @@
         sndPop();
         document.querySelectorAll('#picto-evolve .evolve-stage').forEach(x => x.classList.remove('active'));
         el.classList.add('active');
-        if (id === 'ev-stage1') speak(d.e, 0.7);
+        if (id === 'ev-stage1') speak(d.w[0], 0.7);
         else speak(ch + '。' + d.w[0] + '的' + ch, 0.7);
       };
     });
@@ -912,7 +919,12 @@
     speak(ch + '。' + CD[ch].w[0] + '的' + ch, 0.7);
     const others = ALL.filter(x => x !== ch).sort(() => Math.random() - .5).slice(0, 3);
     const opts = [ch, ...others].sort(() => Math.random() - .5);
-    $('#gf-opts').innerHTML = opts.map(c => '<button class="opt-btn" data-c="' + c + '">' + CD[c].e + '</button>').join('');
+    $('#gf-opts').innerHTML = opts.map(c => {
+      const tw = Math.random() < 0.5;
+      return '<button class="opt-btn" data-c="' + c + '">' + (tw
+        ? '<img src="' + twImg(c) + '" style="width:58px;height:58px;vertical-align:middle">'
+        : CD[c].e) + '</button>';
+    }).join('');
     $('#gf-opts').querySelectorAll('.opt-btn').forEach(b => b.addEventListener('click', () => gfPick(b)));
   }
   function gfPick(b) {

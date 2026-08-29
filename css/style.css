@@ -143,10 +143,20 @@ button { font-family: inherit; cursor: pointer; }
 .sheet .close:active { transform: translateY(3px); box-shadow: 0 1px 0 #C0392B; }
 
 .char-hero { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.pic-frames { display: flex; gap: 12px; }
 .pic-frame {
-  width: 132px; height: 132px; border-radius: 28px; display: flex; align-items: center; justify-content: center;
-  font-size: 76px; background: linear-gradient(160deg,#FFF3C4,#FFE0B2); border: 4px solid #FFD54F; box-shadow: inset 0 -8px 0 rgba(0,0,0,.05);
+  width: 132px; height: 132px; border-radius: 28px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  font-size: 66px; background: linear-gradient(160deg,#FFF3C4,#FFE0B2); border: 4px solid #FFD54F;
+  box-shadow: inset 0 -8px 0 rgba(0,0,0,.05); position: relative;
 }
+.pic-frame .pic-inner { line-height: 1.1; }
+.pic-frame .pic-cap {
+  font-size: 11px; font-weight: 800; color: #8D6E63; background: rgba(255,255,255,.85);
+  border-radius: 999px; padding: 1px 8px; line-height: 1.5;
+}
+.pic-frame.pic-img { background: linear-gradient(160deg,#E3F2FF,#CFE7FF); border-color: #A8CDF0; }
+.pic-frame.pic-img img { width: 86px; height: 86px; }
 .char-hero .main { flex: 1; min-width: 200px; }
 .char-hero .zi-big { font-size: 88px; font-weight: 900; line-height: 1; color: var(--ink); text-shadow: 3px 3px 0 #FFE3E8; }
 .char-hero .py-big { font-size: 26px; color: #E84393; font-weight: 900; margin-top: 2px; }
