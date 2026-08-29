@@ -2,11 +2,15 @@
 
 一个完全离线可用的幼儿识字网页应用：**120 个最简单最常用的汉字**，卡通界面 + 图片联想 + 两种趣味学习法，覆盖「学读、学写、懂意思」。
 
+🔗 **GitHub 仓库**：https://github.com/wangqinmi/hanzi-park （欢迎 Star ⭐）
+
+> 当前版本：**v1.0** · 双图识字 · 神经网络语音 · 笔顺演示/描红/自由画
+
 ## 🚀 怎么使用
 
 ### 📱 Android 手机/平板（推荐）
 
-安装根目录的 **`汉字乐园.apk`**（约 180KB，Android 5.0 及以上）：
+安装根目录的 **`汉字乐园.apk`**（约 1.3MB，Android 5.0 及以上）：
 
 1. 把 APK 文件传到手机上（微信、QQ、数据线均可）；
 2. 点击安装；若提示"未知来源应用"，按提示在系统设置里允许"安装未知应用"；
@@ -45,6 +49,19 @@
 
 笔画数据来自开源项目 [hanzi-writer-data](https://github.com/chanind/hanzi-writer-data)（npm 最新版 2.0.1，源自 Make Me a Hanzi 项目），与小学语文一年级上册《会写字》笔顺一致，已本地化打包、完全离线可用；书写引擎（笔顺演示 / 描红判分 / 自由画）为本应用自研实现，支持手指、触控笔和鼠标。插画图使用 [Twemoji](https://github.com/jdecked/twemoji) 矢量图形（CC-BY 4.0，© Twitter/X），已本地化打包。
 
+## 🖼️ 双图识字
+
+每个字都配了**两张风格不同的清晰图片**，帮助小朋友多角度建立「字—形—义」的联系：
+
+| | 表情图 | 插画图 |
+|---|---|---|
+| 来源 | 系统原生表情（3D 质感） | Twemoji 矢量插画（扁平风格） |
+| 格式 | 系统字体渲染 | SVG 矢量，任意尺寸清晰 |
+| 展示 | 详情页左框（黄底） | 详情页右框（蓝底），并排摆放 |
+| 游戏 | 看图认字、找朋友随机轮换两种图片 | 同左 |
+
+> 两张图都经过逐字检查、全部本地化打包，离线可用。
+
 ## 🖼️ 趣味方法① 图画变变变
 
 - **看图认字**：看大图片，四选一找对应的汉字；
@@ -66,15 +83,34 @@
 
 由于迪士尼、哆啦A梦等经典动画 IP 受版权保护，本应用使用了 **4 个原创卡通伙伴**（乐乐猫、贝贝熊、图图兔、阿鸭）——它们采用经典卡通的大眼睛、圆脑袋画风，负责欢迎、鼓励和表扬小朋友。
 
+## 📦 重新打包 APK
+
+```bash
+# 环境要求：JDK 17、Android SDK（platforms;android-34 + build-tools;34.0.0）、Gradle 8.7
+cd android/
+echo "sdk.dir=/你的AndroidSDK路径" > local.properties
+gradle assembleRelease   # 或 ./gradlew assembleRelease
+# 产物：app/build/outputs/apk/release/app-release.apk
+```
+
+> 依赖仓库已配置**阿里云 Maven 镜像**（国内下载 AGP/OkHttp 更快更稳），也可自行改回 google()。
+
 ## 📁 文件结构
 
 ```
-汉字乐园.apk        Android 安装包（WebView 壳 + 系统中文语音桥接）
+汉字乐园.apk        Android 安装包（WebView 壳 + Edge神经网络语音桥接）
 android/            Android 工程源码（可自行修改后重新打包）
 index.html          页面骨架
 css/style.css       卡通视觉样式
-js/data.js          120 字学习数据 + 40 幅手绘象形画
+js/data.js          120 字学习数据（拼音/释义/组词/句子/口诀）+ 40 幅手绘象形画
 js/strokes.js       120 字笔顺数据（本地化）
 js/mascots.js       4 个原创卡通伙伴
-js/app.js           主程序：学堂 / 书写引擎 / 游戏 / 成就 / 语音 / 音效
+js/app.js           主程序：学堂 / 书写引擎 / 双图 / 游戏 / 成就 / 语音
+img/twemoji/        120 张 Twemoji 矢量插画图（ASCII 码点命名）
+build/              QA 自动化测试、笔顺数据校验/下载、图标生成等工具脚本
 ```
+
+## 📜 更新日志
+
+- **v1.0**（最新）：双图识字（120 张 Twemoji 矢量插画）、神经网络语音 + 语音缓存/预合成、完整释义点读、学习页全部句子可点读、硬笔实心描红（笔顺演示/描红判分/自由画）、字方向修正
+- 早期：120 字学习内容、两种趣味学习法、成就系统、卡通伙伴、Android APK 发布
