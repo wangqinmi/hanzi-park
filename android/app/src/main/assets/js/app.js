@@ -763,7 +763,7 @@
       '<div class="zi">' + k + '</div>' +
       '<div class="py">' + d.read + '</div></button>';
   }
-  const PY_TABS = ['声母', '韵母', '整体认读', '声调', '拼读'];
+  const PY_TABS = ['声母', '韵母', '整体认读', '声调', '拼读', '拼音游戏'];
   function renderPinyin() {
     const tabs = $('#py-tabs');
     tabs.innerHTML = PY_TABS.map(g =>
@@ -777,6 +777,7 @@
     grid.classList.toggle('hidden', !isGrid);
     $('#py-tone').classList.toggle('hidden', pyTab !== '声调');
     $('#py-spell').classList.toggle('hidden', pyTab !== '拼读');
+    $('#py-games').classList.toggle('hidden', pyTab !== '拼音游戏');
     if (pyTab === '韵母') {
       grid.innerHTML = Object.entries(PY_FINAL_SUB).map(([sub, keys]) =>
         '<div class="py-group-head" style="grid-column:1/-1">' + sub + '</div>' +
@@ -789,6 +790,7 @@
     }));
     if (pyTab === '声调') renderTone();
     if (pyTab === '拼读') renderSpell();
+    if (pyTab === '拼音游戏') renderPyGames();
   }
 
   /* ---- 声调学习 ---- */
@@ -934,6 +936,8 @@
   function openPinyin(key) {
     const d = PY[key];
     if (!d) return;
+    curPYKey = key;
+    $('#py-write-card').classList.add('hidden');
     $('#py-zi').textContent = key;
     $('#py-read').textContent = d.read;
     $('#py-cat').textContent = '🔤 ' + d.cat;
@@ -983,6 +987,469 @@
       $('#pinyin-overlay').classList.add('hidden');
       ttsStop();
     }
+  });
+
+  /* ---- 拼音字母书写（四线三格） ---- */
+  const LSPACE_W = 100, LSPACE_H = 130;
+  const LSCALE = (WS - WPAD * 2) / LSPACE_H;
+  const LTX = (WS - LSPACE_W * LSCALE) / 2;
+  const LTY = (WS - LSPACE_H * LSCALE) / 2;
+  const L2X = x => x * LSCALE + LTX;
+  const L2Y = y => y * LSCALE + LTY;
+  let curPYKey = null;
+  let PW = null, pwCanvas = null, pwCtx = null, pwInk = null, pwIctx = null;
+  let pwInputOn = false, pwDrawing = false, pwPts = [], pyWriteMode = 'demo';
+
+  function pyStrokeOf(key) { return window.PINYIN_WRITE[key] || null; }
+  function initPWCanvas() {
+    if (pwCanvas) return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    pwCanvas = $('#py-write-canvas');
+    pwCanvas.width = WS * dpr; pwCanvas.height = WS * dpr;
+    pwCanvas.style.width = '100%'; pwCanvas.style.height = '100%';
+    pwCtx = pwCanvas.getContext('2d');
+    pwCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pwInk = document.createElement('canvas');
+    pwInk.width = WS * dpr; pwInk.height = WS * dpr;
+    pwInk.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;touch-action:none;z-index:2;';
+    pwIctx = pwInk.getContext('2d');
+    pwIctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pwIctx.lineWidth = 8; pwIctx.lineCap = 'round'; pwIctx.lineJoin = 'round';
+    pwIctx.strokeStyle = 'rgba(255,159,67,.95)';
+    const box = $('#py-write-box');
+    box.style.position = 'relative';
+    box.appendChild(pwInk);
+    bindPWInput();
+  }
+  function initPW(key) {
+    initPWCanvas();
+    const strokes = pyStrokeOf(key);
+    if (!strokes) { $('#py-write-hint').textContent = '⚠️ 这个字母暂时没有书写数据'; return false; }
+    PW = {
+      key,
+      n: strokes.length,
+      paths: strokes.map(d => new Path2D(d)),
+      anims: strokes.map(d => sampleOutlinePts(d)),
+      medians: strokes.map(d => sampleOutlinePts(d).pts.map(p => [L2X(p[0]), L2Y(p[1])])),
+      done: new Array(strokes.length).fill(false),
+      cur: 0, misses: 0, animToken: 0, mode: 'demo',
+    };
+    return true;
+  }
+  function pwDrawGrid(ctx) {
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    for (const [y, c] of [[0, '#BBDEFB'], [50, '#BBDEFB'], [90, '#F48FB1'], [115, '#BBDEFB']]) {
+      ctx.strokeStyle = c;
+      ctx.beginPath(); ctx.moveTo(L2X(0), L2Y(y)); ctx.lineTo(L2X(100), L2Y(y)); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function pwDrawStatic() {
+    if (!PW) return;
+    const ctx = pwCtx;
+    ctx.clearRect(0, 0, WS, WS);
+    pwDrawGrid(ctx);
+    ctx.save();
+    ctx.translate(LTX, LTY);
+    ctx.scale(LSCALE, LSCALE);
+    ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.lineDashOffset = 0;
+    for (let i = 0; i < PW.n; i++) {
+      if (PW.mode === 'free') ctx.strokeStyle = '#E4D7BF';
+      else if (PW.done[i]) ctx.strokeStyle = '#E84393';
+      else if (i === PW.cur && PW.mode === 'trace') { ctx.strokeStyle = '#FF9F43'; ctx.setLineDash([9, 7]); }
+      else ctx.strokeStyle = '#E4D7BF';
+      ctx.stroke(PW.paths[i]);
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+  function pwAnimateStroke(i, onDone) {
+    if (!PW) return;
+    const token = ++PW.animToken;
+    const a = PW.anims[i];
+    const L = a.total * 1.02 + 40;
+    const dur = Math.min(1100, Math.max(420, 360 + a.total * 1.1));
+    const t0 = performance.now();
+    const ctx = pwCtx;
+    function frame(t) {
+      if (token !== PW.animToken) return;
+      const p = Math.min(1, (t - t0) / dur);
+      pwDrawStatic();
+      ctx.save();
+      ctx.translate(LTX, LTY);
+      ctx.scale(LSCALE, LSCALE);
+      ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#E84393';
+      ctx.setLineDash([L, L]);
+      ctx.lineDashOffset = L * (1 - p);
+      ctx.stroke(PW.paths[i]);
+      ctx.restore();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      const target = p * a.total;
+      let idx = 1;
+      while (idx < a.cums.length && a.cums[idx] < target) idx++;
+      const q = a.pts[Math.min(idx, a.pts.length - 1)];
+      ctx.fillStyle = '#E84393';
+      ctx.beginPath(); ctx.arc(L2X(q[0]), L2Y(q[1]), 6, 0, Math.PI * 2); ctx.fill();
+      if (p < 1) requestAnimationFrame(frame);
+      else if (onDone) onDone();
+    }
+    requestAnimationFrame(frame);
+  }
+  function pwClearInk() { if (pwIctx) pwIctx.clearRect(0, 0, WS, WS); }
+  function pwDemoAll() {
+    if (!PW) return;
+    PW.mode = 'demo';
+    PW.done.fill(false); PW.cur = 0; PW.misses = 0;
+    pwClearInk();
+    pwInputOn = false;
+    pwDrawStatic();
+    let i = 0;
+    const step = () => {
+      if (!PW || PW.mode !== 'demo') return;
+      if (i >= PW.n) { $('#py-write-hint').textContent = '✨ 写完了！点"描一描"自己试试吧～'; return; }
+      $('#py-write-hint').textContent = '第 ' + (i + 1) + ' / ' + PW.n + ' 笔';
+      pwAnimateStroke(i, () => {
+        PW.done[i] = true;
+        pwDrawStatic();
+        i++;
+        if (PW && PW.mode === 'demo') setTimeout(step, 320);
+      });
+    };
+    step();
+  }
+  function pwStartTrace() {
+    if (!PW) return;
+    PW.mode = 'trace';
+    PW.animToken++;
+    PW.done.fill(false); PW.cur = 0; PW.misses = 0;
+    pwClearInk();
+    pwDrawStatic();
+    pwInputOn = true;
+    $('#py-write-hint').textContent = '第 1 / ' + PW.n + ' 笔：跟着橙色笔画描一描';
+  }
+  function pwJudge() {
+    if (!PW || PW.mode !== 'trace') return;
+    const pts = PW.medians[PW.cur];
+    if (!pwPts.length) { pwClearInk(); return; }
+    if (pwPts.length < 4) { pwClearInk(); $('#py-write-hint').textContent = '笔画太短啦，再描长一点～'; pwInputOn = true; return; }
+    const nSeg = pts.length - 1;
+    const covered = new Array(nSeg).fill(false);
+    const ds = pwPts.map(p => {
+      let best = 1e9, bestK = -1;
+      for (let k = 0; k < nSeg; k++) {
+        const r = distToSeg(p[0], p[1], pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1]);
+        if (r.d < best) { best = r.d; bestK = k; }
+      }
+      if (best < PASS_DIST) covered[bestK] = true;
+      return best;
+    }).sort((a, b) => a - b);
+    const m = Math.max(3, Math.floor(ds.length * 0.8));
+    const avg = ds.slice(0, m).reduce((a, b) => a + b, 0) / m;
+    const cover = covered.filter(Boolean).length / nSeg;
+    const ok = avg < PASS_DIST && cover >= PASS_COVER;
+    if (ok) {
+      pwInputOn = false;
+      sndCorrect();
+      PW.done[PW.cur] = true;
+      setTimeout(() => { pwClearInk(); pwDrawStatic(); }, 240);
+      if (PW.cur + 1 >= PW.n) {
+        pwInputOn = false;
+        $('#py-write-hint').textContent = '🎉 全部写完了！你太棒啦！';
+        confetti(); sndFanfare(); mascotPraise();
+      } else {
+        PW.cur++; PW.misses = 0;
+        $('#py-write-hint').textContent = '第 ' + (PW.cur + 1) + ' / ' + PW.n + ' 笔：真棒，继续！';
+        setTimeout(() => { pwDrawStatic(); pwInputOn = true; }, 320);
+      }
+    } else {
+      sndWrong();
+      PW.misses++;
+      pwInputOn = false;
+      $('#py-write-hint').textContent = '差一点点，跟着橙色笔画再试一次～';
+      const box = $('#py-write-box');
+      box.classList.add('shake');
+      setTimeout(() => box.classList.remove('shake'), 460);
+      setTimeout(() => { pwClearInk(); pwDrawStatic(); pwInputOn = true; }, 460);
+      if (PW.misses >= 2) {
+        $('#py-write-hint').textContent = '差一点点～看，这一笔是这样写的！';
+        pwAnimateStroke(PW.cur, () => { pwDrawStatic(); pwInputOn = true; });
+      }
+    }
+  }
+  function pwHintStroke() {
+    if (!PW || PW.mode !== 'trace') return;
+    pwInputOn = false;
+    pwClearInk(); pwDrawStatic();
+    $('#py-write-hint').textContent = '看，这一笔是这样写的～';
+    pwAnimateStroke(PW.cur, () => { pwDrawStatic(); pwInputOn = true; });
+  }
+  function pwSkipStroke() {
+    if (!PW || PW.mode !== 'trace') return;
+    PW.animToken++;
+    PW.done[PW.cur] = true;
+    pwClearInk();
+    if (PW.cur + 1 >= PW.n) {
+      PW.cur = PW.n - 1;
+      pwDrawStatic();
+      $('#py-write-hint').textContent = '🎉 写完了！';
+      confetti(); sndFanfare(); mascotPraise();
+    } else {
+      PW.cur++; PW.misses = 0;
+      pwDrawStatic();
+      $('#py-write-hint').textContent = '第 ' + (PW.cur + 1) + ' / ' + PW.n + ' 笔';
+    }
+  }
+  function pwStartFree() {
+    if (!PW) return;
+    PW.mode = 'free';
+    PW.animToken++;
+    pwClearInk();
+    pwDrawStatic();
+    pwInputOn = true;
+    $('#py-write-hint').textContent = '照着灰影子随便画，好玩就行～';
+  }
+  function bindPWInput() {
+    function pos(e) {
+      const r = pwInk.getBoundingClientRect();
+      const t = e.touches && e.touches.length ? e.touches[0] : e;
+      return [(t.clientX - r.left) * (WS / r.width), (t.clientY - r.top) * (WS / r.height)];
+    }
+    if (window.PointerEvent) {
+      pwInk.addEventListener('pointerdown', e => {
+        if (!pwInputOn) return;
+        e.preventDefault();
+        pwDrawing = true; pwPts = [pos(e)];
+        pwIctx.beginPath(); pwIctx.moveTo(pwPts[0][0], pwPts[0][1]);
+        pwIctx.lineTo(pwPts[0][0] + .1, pwPts[0][1] + .1); pwIctx.stroke();
+        try { pwInk.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      pwInk.addEventListener('pointermove', e => {
+        if (!pwDrawing) return;
+        const p = pos(e); pwPts.push(p);
+        pwIctx.lineTo(p[0], p[1]); pwIctx.stroke();
+      });
+      const up = () => { if (!pwDrawing) return; pwDrawing = false; pwJudge(); };
+      pwInk.addEventListener('pointerup', up);
+      pwInk.addEventListener('pointercancel', up);
+    } else {
+      pwInk.addEventListener('touchstart', e => {
+        if (!pwInputOn) return;
+        e.preventDefault();
+        pwDrawing = true; pwPts = [pos(e)];
+        pwIctx.beginPath(); pwIctx.moveTo(pwPts[0][0], pwPts[0][1]);
+        pwIctx.lineTo(pwPts[0][0] + .1, pwPts[0][1] + .1); pwIctx.stroke();
+      }, { passive: false });
+      pwInk.addEventListener('touchmove', e => {
+        if (pwDrawing) {
+          e.preventDefault();
+          const p = pos(e); pwPts.push(p);
+          pwIctx.lineTo(p[0], p[1]); pwIctx.stroke();
+        }
+      }, { passive: false });
+      pwInk.addEventListener('touchend', () => { if (pwDrawing) { pwDrawing = false; pwJudge(); } });
+    }
+  }
+  function setPYWriteMode(mode) {
+    if (!PW || PW.key !== curPYKey) { if (!initPW(curPYKey)) return; }
+    pyWriteMode = mode;
+    document.querySelectorAll('[data-pywt]').forEach(t => t.classList.toggle('active', t.dataset.pywt === mode));
+    if (mode === 'demo') pwDemoAll();
+    else if (mode === 'trace') pwStartTrace();
+    else pwStartFree();
+    updatePYWriteBtns(mode);
+  }
+  function updatePYWriteBtns(mode) {
+    const b1 = $('#btn-py-replay'), b2 = $('#btn-py-quiz');
+    if (mode === 'demo') { b1.textContent = '🔁 再看一遍'; b2.textContent = '✍️ 我来描一描'; }
+    else if (mode === 'trace') { b1.textContent = '💡 提示这一笔'; b2.textContent = '⏭️ 跳过这一笔'; }
+    else { b1.textContent = '🧹 清空画纸'; b2.textContent = '✍️ 去描一描'; }
+  }
+  $('#btn-py-write').addEventListener('click', () => {
+    sndPop();
+    $('#py-write-card').classList.remove('hidden');
+    $('#py-write-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pyWriteMode = '';
+    setPYWriteMode('demo');
+  });
+  document.querySelectorAll('[data-pywt]').forEach(t => t.addEventListener('click', () => { sndPop(); setPYWriteMode(t.dataset.pywt); }));
+  $('#btn-py-replay').addEventListener('click', () => {
+    sndPop();
+    if (pyWriteMode === 'demo') setPYWriteMode('demo');
+    else if (pyWriteMode === 'trace') pwHintStroke();
+    else pwClearInk();
+  });
+  $('#btn-py-quiz').addEventListener('click', () => {
+    sndPop();
+    if (pyWriteMode === 'demo') setPYWriteMode('trace');
+    else if (pyWriteMode === 'trace') pwSkipStroke();
+    else setPYWriteMode('trace');
+  });
+
+  /* ---- 拼音游戏 ---- */
+  let pygTab = 'find';
+  function renderPyGames() {
+    document.querySelectorAll('[data-pyg]').forEach(b => b.classList.toggle('active', b.dataset.pyg === pygTab));
+    ['find', 'build', 'train'].forEach(g => $('#pyg-' + g).classList.toggle('hidden', g !== pygTab));
+    if (pygTab === 'find') pygFindNext();
+    if (pygTab === 'build') pygBuildNext();
+    if (pygTab === 'train') pygTrainNext();
+  }
+  document.querySelectorAll('[data-pyg]').forEach(b => b.addEventListener('click', () => { sndPop(); pygTab = b.dataset.pyg; renderPyGames(); }));
+
+  let pygFindRight = null, pygFindScore = 0, pygFindStars = 0, pygFindTotal = 0, pygFindLock = false;
+  function pygFindPoolBuild() {
+    const pool = [];
+    for (const [ch, d] of Object.entries(CD)) {
+      const m = d.p.match(/^(zh|ch|sh|[bpmfdtnlgkhjqxzcsryw])/);
+      if (m) pool.push({ w: ch, py: d.p, i: m[1] });
+    }
+    return pool;
+  }
+  function pygFindNext() {
+    if (pygFindLock) return;
+    pygFindTotal++;
+    const pool = pygFindPoolBuild();
+    pygFindRight = pool[Math.floor(Math.random() * pool.length)];
+    $('#pyg-find-q').textContent = '👂 听一听，这个词的声母是谁？';
+    $('#pyg-find-q').dataset.i = pygFindRight.i;
+    speak(pygFindRight.w + '，' + pygFindRight.w + '。', 0.75);
+    const others = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w']
+      .filter(x => x !== pygFindRight.i).sort(() => Math.random() - .5).slice(0, 3);
+    const opts = [pygFindRight.i, ...others].sort(() => Math.random() - .5);
+    $('#pyg-find-opts').innerHTML = opts.map(k =>
+      '<button class="opt-btn" data-k="' + k + '" style="font-size:34px">' + k + '</button>').join('');
+    $('#pyg-find-opts').querySelectorAll('.opt-btn').forEach(b => b.addEventListener('click', () => pygFindPick(b)));
+  }
+  function pygFindPick(b) {
+    if (pygFindLock) return;
+    pygFindLock = true;
+    if (b.dataset.k === pygFindRight.i) {
+      b.classList.add('right'); sndCorrect();
+      pygFindScore++;
+      mascotPraise();
+      $('#pyg-find-q').textContent = '🎉 答案：' + pygFindRight.w + ' ' + pygFindRight.py + '（声母 ' + pygFindRight.i + '）';
+      setTimeout(() => {
+        pygFindLock = false;
+        if (pygFindTotal % 10 === 0) {
+          const earn = Math.round(pygFindScore / 2);
+          addStars(earn); pygFindStars += earn;
+          confetti(); sndFanfare();
+          mascotSay('cat', '声母找得真准！答对 ' + pygFindScore + ' 题，送你 ' + earn + ' 颗星星！', 3200);
+        }
+        pygFindNext();
+      }, 900);
+    } else {
+      b.classList.add('wrong'); sndWrong(); mascotCheer();
+      setTimeout(() => { b.classList.remove('wrong'); pygFindLock = false; }, 550);
+    }
+    $('#pyg-find-score').textContent = pygFindScore;
+    $('#pyg-find-stars').textContent = pygFindStars;
+  }
+  $('#pyg-find-play').addEventListener('click', () => {
+    if (pygFindRight) speak(pygFindRight.w + '，' + pygFindRight.w + '。', 0.75);
+  });
+
+  let pygBuildEntry = null, pygBuildSelI = null, pygBuildScore = 0, pygBuildStars = 0, pygBuildTotal = 0, pygBuildLock = false;
+  function pygBuildChips() {
+    $('#pyg-build-i').innerHTML = PY_GROUPS['声母'].map(k =>
+      '<button class="chip spell-chip' + (pygBuildSelI === k ? ' sel' : '') + '" data-row="i" data-k="' + k + '">' + k + '</button>').join('');
+    $('#pyg-build-f').innerHTML = PY_GROUPS['韵母'].map(k =>
+      '<button class="chip spell-chip" data-row="f" data-k="' + k + '">' + k + '</button>').join('');
+  }
+  function pygBuildNext() {
+    if (pygBuildLock) return;
+    pygBuildTotal++;
+    pygBuildEntry = window.PINYIN_SPELL.two[Math.floor(Math.random() * window.PINYIN_SPELL.two.length)];
+    pygBuildSelI = null;
+    $('#pyg-build-q').textContent = '👂 听一听，拼出这个词的音节！';
+    $('#pyg-build-q').dataset.i = pygBuildEntry.i;
+    $('#pyg-build-q').dataset.f = pygBuildEntry.f;
+    $('#pyg-build-result').textContent = '👆 先选声母，再选韵母';
+    pygBuildChips();
+    speak(pygBuildEntry.w + '，' + pygBuildEntry.w + '。', 0.75);
+  }
+  function pygBuildPick(b) {
+    if (pygBuildLock) return;
+    const row = b.dataset.row, k = b.dataset.k;
+    if (row === 'i') { pygBuildSelI = k; pygBuildChips(); return; }
+    if (!pygBuildSelI) { $('#pyg-build-result').textContent = '先选一个声母哦～'; return; }
+    if (pygBuildSelI === pygBuildEntry.i && k === pygBuildEntry.f) {
+      pygBuildLock = true;
+      sndCorrect(); mascotPraise();
+      pygBuildScore++;
+      S.pySpell = (S.pySpell || 0) + 1; store.save();
+      $('#pyg-build-result').textContent = '🎉 ' + pygBuildSelI + ' ＋ ' + k + ' → ' + stripTone(pygBuildEntry.py) + ' · ' + pygBuildEntry.w + '（' + pygBuildEntry.py + '）';
+      setTimeout(() => {
+        pygBuildLock = false;
+        if (pygBuildTotal % 8 === 0) {
+          const earn = Math.round(pygBuildScore / 2);
+          addStars(earn); pygBuildStars += earn;
+          confetti(); sndFanfare();
+          mascotSay('rabbit', '拼读小能手！拼对 ' + pygBuildScore + ' 个，送你 ' + earn + ' 颗星星！', 3200);
+        }
+        pygBuildNext();
+      }, 1000);
+    } else {
+      sndWrong(); mascotCheer();
+      $('#pyg-build-result').textContent = pygBuildSelI + ' ＋ ' + k + ' 不对哦，再听一听、换一换～';
+      pygBuildSelI = null;
+      setTimeout(pygBuildChips, 550);
+    }
+    $('#pyg-build-score').textContent = pygBuildScore;
+    $('#pyg-build-stars').textContent = pygBuildStars;
+  }
+  document.querySelector('#pyg-build').addEventListener('click', e => {
+    const b = e.target.closest('.spell-chip');
+    if (b) { sndPop(); pygBuildPick(b); }
+  });
+  $('#pyg-build-play').addEventListener('click', () => {
+    if (pygBuildEntry) speak(pygBuildEntry.w + '，' + pygBuildEntry.w + '。', 0.75);
+  });
+
+  let pygTrainRight = null, pygTrainScore = 0, pygTrainStars = 0, pygTrainTotal = 0, pygTrainLock = false;
+  function pygTrainNext() {
+    if (pygTrainLock) return;
+    pygTrainTotal++;
+    pygTrainRight = TONE_POOL[Math.floor(Math.random() * TONE_POOL.length)];
+    $('#pyg-train-q').textContent = '🚂 听一听，这个词该上哪节车厢？';
+    $('#pyg-train-q').dataset.tone = pygTrainRight.tone;
+    speak(pygTrainRight.w + '，' + pygTrainRight.w + '。', 0.75);
+    $('#pyg-train-opts').innerHTML = [1, 2, 3, 4].map(n =>
+      '<button class="opt-btn" data-n="' + n + '" style="font-size:24px">' + ['🚂', '🚃', '🚃', '🚃'][n - 1] +
+      ' ' + ['一', '二', '三', '四'][n - 1] + '声</button>').join('');
+    $('#pyg-train-opts').querySelectorAll('.opt-btn').forEach(b => b.addEventListener('click', () => pygTrainPick(b)));
+  }
+  function pygTrainPick(b) {
+    if (pygTrainLock) return;
+    pygTrainLock = true;
+    if (+b.dataset.n === pygTrainRight.tone) {
+      b.classList.add('right'); sndCorrect();
+      pygTrainScore++;
+      S.pyTone = (S.pyTone || 0) + 1; store.save();
+      mascotPraise();
+      $('#pyg-train-q').textContent = '🎉 ' + pygTrainRight.w + ' ' + pygTrainRight.py + ' 上了第' + ['一', '二', '三', '四'][pygTrainRight.tone - 1] + '节车厢！';
+      setTimeout(() => {
+        pygTrainLock = false;
+        if (pygTrainTotal % 10 === 0) {
+          const earn = Math.round(pygTrainScore / 2);
+          addStars(earn); pygTrainStars += earn;
+          confetti(); sndFanfare();
+          mascotSay('bear', '声调小火车开得真稳！答对 ' + pygTrainScore + ' 题，送你 ' + earn + ' 颗星星！', 3200);
+        }
+        pygTrainNext();
+      }, 950);
+    } else {
+      b.classList.add('wrong'); sndWrong(); mascotCheer();
+      setTimeout(() => { b.classList.remove('wrong'); pygTrainLock = false; }, 550);
+    }
+    $('#pyg-train-score').textContent = pygTrainScore;
+    $('#pyg-train-stars').textContent = pygTrainStars;
+  }
+  $('#pyg-train-play').addEventListener('click', () => {
+    if (pygTrainRight) speak(pygTrainRight.w + '，' + pygTrainRight.w + '。', 0.75);
   });
 
   /* ---------- 方法一：图画变变变 ---------- */
@@ -1231,10 +1698,12 @@
     { n: 60, icon: '🐎', name: '识字小达人', desc: '学会 60 个字' },
     { n: 100, icon: '🦅', name: '汉字小明星', desc: '学会 100 个字' },
     { n: 120, icon: '🐉', name: '汉字小博士', desc: '学会全部 120 个字' },
+    { n: 5, icon: '🎵', name: '声调小耳朵', desc: '听音辨调答对 5 题', src: 'pyTone' },
+    { n: 10, icon: '🔤', name: '拼音小达人', desc: '拼音游戏拼对 10 次', src: 'pySpell' },
   ];
   function renderAchieve() {
-    const n = S.learned.length;
     $('#badge-list').innerHTML = BADGES.map(b => {
+      const n = b.src ? (S[b.src] || 0) : S.learned.length;
       const got = n >= b.n;
       return '<div class="badge ' + (got ? 'got' : 'locked') + '">' +
         '<span class="b-icon">' + b.icon + '</span>' +

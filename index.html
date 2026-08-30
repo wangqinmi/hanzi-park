@@ -137,6 +137,39 @@
         </div>
       </div>
 
+      <!-- 拼音游戏 -->
+      <div id="py-games" class="hidden">
+        <div class="game-tabs">
+          <button class="game-card" data-pyg="find" style="background:linear-gradient(160deg,#6DD5FA,#54A0FF)">🔎 找声母</button>
+          <button class="game-card" data-pyg="build" style="background:linear-gradient(160deg,#FDCB6E,#F39C12)">🧩 拼一拼</button>
+          <button class="game-card" data-pyg="train" style="background:linear-gradient(160deg,#F78FB3,#E84393)">🚂 声调小火车</button>
+        </div>
+        <div class="game-area">
+          <div id="pyg-find">
+            <div class="game-q" id="pyg-find-q">👂 听一听，这个词的声母是谁？</div>
+            <div style="text-align:center;margin-bottom:10px"><button class="big-btn green" id="pyg-find-play" style="flex:0 0 auto;min-width:180px">▶️ 听声音</button></div>
+            <div class="opt-grid" id="pyg-find-opts"></div>
+            <div class="score-line"><span class="score-pill">✅ 答对 <b id="pyg-find-score">0</b></span><span class="score-pill">⭐ 星星 <b id="pyg-find-stars">0</b></span></div>
+          </div>
+          <div id="pyg-build" class="hidden">
+            <div class="game-q" id="pyg-build-q">👂 听一听，拼出这个词的音节！</div>
+            <div style="text-align:center;margin-bottom:10px"><button class="big-btn green" id="pyg-build-play" style="flex:0 0 auto;min-width:180px">▶️ 听声音</button></div>
+            <div class="spell-rows">
+              <div class="spell-row" id="pyg-build-i" data-label="声母"></div>
+              <div class="spell-row" id="pyg-build-f" data-label="韵母"></div>
+            </div>
+            <div class="spell-result" id="pyg-build-result">👆 先选声母，再选韵母</div>
+            <div class="score-line"><span class="score-pill">✅ 拼对 <b id="pyg-build-score">0</b></span><span class="score-pill">⭐ 星星 <b id="pyg-build-stars">0</b></span></div>
+          </div>
+          <div id="pyg-train" class="hidden">
+            <div class="game-q" id="pyg-train-q">🚂 声调小火车：听一听，这个词该上哪节车厢？</div>
+            <div style="text-align:center;margin-bottom:10px"><button class="big-btn green" id="pyg-train-play" style="flex:0 0 auto;min-width:180px">▶️ 听声音</button></div>
+            <div class="opt-grid" id="pyg-train-opts"></div>
+            <div class="score-line"><span class="score-pill">✅ 答对 <b id="pyg-train-score">0</b></span><span class="score-pill">⭐ 星星 <b id="pyg-train-stars">0</b></span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 拼读练习 -->
       <div id="py-spell" class="hidden">
         <div class="game-tabs">
@@ -241,6 +274,21 @@
       </div>
       <div class="fn-row">
         <button class="fn-btn fn-read" id="btn-py-read">🔊 听一听</button>
+        <button class="fn-btn fn-write" id="btn-py-write">✍️ 学写字母</button>
+      </div>
+      <div class="info-card hidden" id="py-write-card">
+        <h3>✍️ 四线三格 · 学写拼音字母</h3>
+        <div class="write-tabs">
+          <button class="write-tab active" data-pywt="demo">▶️ 看演示</button>
+          <button class="write-tab" data-pywt="trace">🖍️ 描一描</button>
+          <button class="write-tab" data-pywt="free">🎨 自由画</button>
+        </div>
+        <div class="write-box" id="py-write-box"><canvas id="py-write-canvas" width="320" height="320"></canvas></div>
+        <div class="write-hint" id="py-write-hint">点"看演示"，看看这个字母怎么写～</div>
+        <div class="write-actions">
+          <button class="big-btn blue" id="btn-py-replay">🔁 再看一遍</button>
+          <button class="big-btn green" id="btn-py-quiz">✅ 我会写了</button>
+        </div>
       </div>
       <div class="info-card">
         <h3 id="py-tones-title">🎵 四声调：点一点听发音</h3>
@@ -258,6 +306,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/pinyin-data.js"></script>
+  <script src="js/pinyin-write.js"></script>
   <script src="js/mascots.js"></script>
   <script src="js/strokes.js"></script>
   <script src="js/app.js"></script>

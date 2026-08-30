@@ -59,6 +59,7 @@ class CDP {
   }
   const results = [];
   const check = (name, pass, detail) => { results.push((pass ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' | ' + detail : '')); };
+  const clickSel = sel => ev("document.querySelector(" + JSON.stringify(sel) + ").click()");
 
   // 1. 首页菜单包含拼音乐园
   const menuCount = await ev("document.querySelectorAll('.menu-card').length");
@@ -162,6 +163,59 @@ class CDP {
   check('三拼 g+u+a 拼出 瓜', spell3.includes('瓜') && spell3.includes('gua'), spell3.slice(0, 30));
   const rules = await ev("document.querySelectorAll('#spell-rules .info-card').length");
   check('拼读规则3张卡', rules === 3, '规则卡' + rules);
+
+  // 8.5 学写字母：打开韵母 a 详情 → 写字母演示/自由画
+  await ev("document.querySelectorAll('#py-tabs .cat-tab')[1].click()");
+  await sleep(300);
+  await ev("document.querySelector('.py-card[data-py=\"a\"]').click()");
+  await sleep(400);
+  await ev("document.querySelector('#btn-py-write').click()");
+  await sleep(500);
+  const pwShot1 = await ev("document.querySelector('#py-write-canvas').toDataURL()");
+  await sleep(1100);
+  const pwShot2 = await ev("document.querySelector('#py-write-canvas').toDataURL()");
+  check('字母演示动画在动', pwShot1 !== pwShot2);
+  await ev("document.querySelector('[data-pywt=\"free\"]').click()");
+  await sleep(400);
+  const pwScribble = '(async () => { var ink = document.querySelector("#py-write-box canvas:last-child"); var r = ink.getBoundingClientRect(); function pe(t, x, y) { ink.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 5, pointerType: "touch", isPrimary: true, button: 0, buttons: t === "pointerup" ? 0 : 1 })); } pe("pointerdown", r.left + 40, r.top + 40); for (var i = 1; i <= 8; i++) { pe("pointermove", r.left + 40 + i * 15, r.top + 40 + i * 5); await new Promise(function(res){ setTimeout(res, 12); }); } pe("pointerup", r.left + 160, r.top + 80); })()';
+  await ev(pwScribble);
+  await sleep(300);
+  const pwInkPx = await ev("(function(){var c=document.querySelector('#py-write-box canvas:last-child');var d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;var n=0;for(var i=3;i<d.length;i+=28)if(d[i]>0)n++;return n;})()");
+  check('字母自由画可涂画', pwInkPx > 20, '墨迹采样=' + pwInkPx);
+  await ev("document.querySelector('#btn-close-pinyin').click()");
+  await sleep(300);
+
+  // 8.6 找声母游戏
+  await ev("document.querySelectorAll('#py-tabs .cat-tab')[5].click()");
+  await sleep(500);
+  const findAns = await ev("document.querySelector('#pyg-find-q').dataset.i");
+  const findOpts = await ev("document.querySelectorAll('#pyg-find-opts .opt-btn').length");
+  check('找声母出题（4选项）', !!findAns && findOpts === 4, '答案声母=' + findAns);
+  await ev("document.querySelector('.opt-btn[data-k=' + findAns + ']').click()");
+  await clickSel(".opt-btn[data-k='" + findAns + "']");
+  const findScore = await ev("document.querySelector('#pyg-find-score').textContent");
+  check('找声母答对加分', findScore === '1', '得分=' + findScore);
+
+  // 8.7 拼一拼游戏
+  await ev("document.querySelector('[data-pyg=\"build\"]').click()");
+  await sleep(500);
+  const bi = await ev("document.querySelector('#pyg-build-q').dataset.i");
+  const bf = await ev("document.querySelector('#pyg-build-q').dataset.f");
+  await ev("document.querySelector('#pyg-build-i .spell-chip[data-k=' + bi + ']').click()");
+  await clickSel("#pyg-build-i .spell-chip[data-k='" + bi + "']");
+  await ev("document.querySelector('#pyg-build-f .spell-chip[data-k=' + bf + ']').click()");
+  await clickSel("#pyg-build-f .spell-chip[data-k='" + bf + "']");
+  const buildRes = await ev("document.querySelector('#pyg-build-result').textContent");
+  check('拼一拼答对', buildRes.includes('🎉'), buildRes.slice(0, 30));
+
+  // 8.8 声调小火车游戏
+  await ev("document.querySelector('[data-pyg=\"train\"]').click()");
+  await sleep(500);
+  const tn = await ev("document.querySelector('#pyg-train-q').dataset.tone");
+  await ev("document.querySelector('#pyg-train-opts .opt-btn[data-n=' + tn + ']').click()");
+  await clickSel("#pyg-train-opts .opt-btn[data-n='" + tn + "']");
+  const trainScore = await ev("document.querySelector('#pyg-train-score').textContent");
+  check('声调小火车答对加分', trainScore === '1', '得分=' + trainScore);
 
   // 9. 汉字详情拼音反向跳转（鱼 yú → yu）
   await ev("document.querySelector('[data-nav=\"school\"]').click()");
