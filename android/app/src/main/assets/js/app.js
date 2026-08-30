@@ -763,26 +763,174 @@
       '<div class="zi">' + k + '</div>' +
       '<div class="py">' + d.read + '</div></button>';
   }
+  const PY_TABS = ['声母', '韵母', '整体认读', '声调', '拼读'];
   function renderPinyin() {
     const tabs = $('#py-tabs');
-    tabs.innerHTML = Object.keys(PY_GROUPS).map(g =>
+    tabs.innerHTML = PY_TABS.map(g =>
       '<button class="cat-tab' + (g === pyTab ? ' active' : '') + '" data-g="' + g + '">' + g +
-      ' <span style="opacity:.6">' + PY_GROUPS[g].length + '</span></button>').join('');
+      (PY_GROUPS[g] ? ' <span style="opacity:.6">' + PY_GROUPS[g].length + '</span>' : '') + '</button>').join('');
     tabs.querySelectorAll('.cat-tab').forEach(b => b.addEventListener('click', () => {
       sndPop(); pyTab = b.dataset.g; renderPinyin();
     }));
     const grid = $('#py-grid');
+    const isGrid = pyTab === '声母' || pyTab === '韵母' || pyTab === '整体认读';
+    grid.classList.toggle('hidden', !isGrid);
+    $('#py-tone').classList.toggle('hidden', pyTab !== '声调');
+    $('#py-spell').classList.toggle('hidden', pyTab !== '拼读');
     if (pyTab === '韵母') {
       grid.innerHTML = Object.entries(PY_FINAL_SUB).map(([sub, keys]) =>
         '<div class="py-group-head" style="grid-column:1/-1">' + sub + '</div>' +
         keys.map(pyCard).join('')).join('');
-    } else {
+    } else if (isGrid) {
       grid.innerHTML = PY_GROUPS[pyTab].map(pyCard).join('');
     }
     grid.querySelectorAll('.py-card').forEach(b => b.addEventListener('click', () => {
       sndPop(); openPinyin(b.dataset.py);
     }));
+    if (pyTab === '声调') renderTone();
+    if (pyTab === '拼读') renderSpell();
   }
+
+  /* ---- 声调学习 ---- */
+  const TONE_NUM = { 'ā': 1, 'á': 2, 'ǎ': 3, 'à': 4, 'ē': 1, 'é': 2, 'ě': 3, 'è': 4, 'ī': 1, 'í': 2, 'ǐ': 3, 'ì': 4, 'ō': 1, 'ó': 2, 'ǒ': 3, 'ò': 4, 'ū': 1, 'ú': 2, 'ǔ': 3, 'ù': 4, 'ǖ': 1, 'ǘ': 2, 'ǚ': 3, 'ǜ': 4 };
+  const TONE_POOL = (() => {
+    const pool = [];
+    for (const [ch, d] of Object.entries(CD)) {
+      const marks = d.p.match(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/g);
+      if (marks && marks.length === 1 && /^[a-züāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+$/.test(d.p)) {
+        pool.push({ w: ch, py: d.p, tone: TONE_NUM[marks[0]] });
+      }
+    }
+    return pool;
+  })();
+  let toneRight = null, toneScore = 0, toneStars = 0, toneTotal = 0, toneLock = false;
+  function renderTone() {
+    const tones = PY['a'].tones;
+    const paths = ['M10 35 H90', 'M10 60 L90 15', 'M10 15 Q50 75 90 15', 'M10 15 L90 60'];
+    $('#tone-cards').innerHTML = tones.map((t, i) =>
+      '<button class="tone-card" data-w="' + t.w + '">' +
+      '<svg viewBox="0 0 100 70"><path class="tp" d="' + paths[i] + '"/>' +
+      '<circle class="td" r="7"><animateMotion dur="1.8s" repeatCount="indefinite" path="' + paths[i] + '"/></circle></svg>' +
+      '<div class="tone-big">' + t.t + '</div>' +
+      '<div class="tone-word">' + t.w + '（第' + ['一', '二', '三', '四'][i] + '声）</div></button>').join('');
+    $('#tone-cards').querySelectorAll('.tone-card').forEach(b => b.addEventListener('click', () => {
+      sndPop(); speak(b.dataset.w + '，' + b.dataset.w + '。', 0.75);
+    }));
+    $('#tone-light').innerHTML = [['爸', 'bà ba'], ['妈', 'mā ma'], ['了', 'le']].map(([w, py]) =>
+      '<button class="chip" data-w="' + w + '">' + w + ' <span style="opacity:.55">' + py + '</span></button>').join('');
+    $('#tone-light').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      sndPop(); speak(b.dataset.w + '。' + b.dataset.w + '。', 0.75);
+    }));
+    toneNext();
+  }
+  function toneNext() {
+    if (toneLock) return;
+    toneTotal++;
+    toneRight = TONE_POOL[Math.floor(Math.random() * TONE_POOL.length)];
+    $('#tone-q').textContent = '👂 听一听，是第几声？点「听声音」开始';
+    $('#tone-opts').innerHTML = [1, 2, 3, 4].map(n =>
+      '<button class="opt-btn" data-n="' + n + '" style="font-size:26px">' + ['一', '二', '三', '四'][n - 1] + '声</button>').join('');
+    $('#tone-opts').querySelectorAll('.opt-btn').forEach(b => b.addEventListener('click', () => tonePick(b)));
+  }
+  $('#btn-tone-play').addEventListener('click', () => {
+    if (toneRight) speak(toneRight.w + '，' + toneRight.w + '。', 0.75);
+  });
+  function tonePick(b) {
+    if (toneLock) return;
+    const n = +b.dataset.n;
+    if (n === toneRight.tone) {
+      toneLock = true;
+      b.classList.add('right'); sndCorrect();
+      toneScore++;
+      mascotPraise();
+      $('#tone-q').textContent = '🎉 答案：' + toneRight.w + ' ' + toneRight.py + '（第' + ['一', '二', '三', '四'][n - 1] + '声）';
+      setTimeout(() => {
+        toneLock = false;
+        if (toneTotal % 10 === 0) {
+          const earn = Math.round(toneScore / 2);
+          addStars(earn); toneStars += earn;
+          confetti(); sndFanfare();
+          mascotSay('duck', '听声辨调太棒了！答对 ' + toneScore + ' 题，送你 ' + earn + ' 颗星星！', 3200);
+        }
+        toneNext();
+      }, 900);
+    } else {
+      b.classList.add('wrong'); sndWrong(); mascotCheer();
+      setTimeout(() => b.classList.remove('wrong'), 500);
+    }
+    $('#tone-score').textContent = toneScore;
+    $('#tone-stars').textContent = toneStars;
+  }
+
+  /* ---- 拼读练习 ---- */
+  let spellMode = 'two', spellI = null, spellM = null, spellF = null;
+  function renderSpell() {
+    document.querySelectorAll('[data-spell]').forEach(b => b.classList.toggle('active', b.dataset.spell === spellMode));
+    $('#spell-m').classList.toggle('hidden', spellMode === 'two');
+    $('#spell-i').dataset.label = '声母';
+    $('#spell-m').dataset.label = '介母';
+    $('#spell-f').dataset.label = '韵母';
+    spellI = spellM = spellF = null;
+    renderSpellChips();
+    updateSpellResult('👆 点上面的字母开始拼读');
+    $('#spell-rules').innerHTML = window.PINYIN_RULES.map(r =>
+      '<div class="info-card"><h3>' + r.t + '</h3><div class="meaning">' + r.d + '</div><div class="word-chips">' +
+      r.ex.map(w => '<button class="chip" data-w="' + w + '">' + w + '</button>').join('') + '</div></div>').join('');
+    $('#spell-rules').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      sndPop(); speak(b.dataset.w + '，' + b.dataset.w + '。', 0.75);
+    }));
+  }
+  function spellChip(row, k) {
+    const sel = (row === 'i' && spellI === k) || (row === 'm' && spellM === k) || (row === 'f' && spellF === k);
+    return '<button class="chip spell-chip' + (sel ? ' sel' : '') + '" data-row="' + row + '" data-k="' + k + '">' + k + '</button>';
+  }
+  function renderSpellChips() {
+    $('#spell-i').innerHTML = PY_GROUPS['声母'].map(k => spellChip('i', k)).join('');
+    $('#spell-m').innerHTML = ['i', 'u', 'ü'].map(k => spellChip('m', k)).join('');
+    $('#spell-f').innerHTML = PY_GROUPS['韵母'].map(k => spellChip('f', k)).join('');
+  }
+  function updateSpellResult(html) {
+    $('#spell-result').innerHTML = html;
+  }
+  function trySpell() {
+    if (spellMode === 'two') {
+      if (!spellI || !spellF) return;
+      const hit = window.PINYIN_SPELL.two.find(s => s.i === spellI && s.f === spellF);
+      if (hit) {
+        updateSpellResult(spellI + ' ＋ ' + spellF + ' → <b>' + stripTone(hit.py) + '</b> · ' + hit.w + '（' + hit.py + '）');
+        sndCorrect(); mascotPraise();
+        speak(hit.w + '，' + hit.w + '。', 0.75);
+      } else {
+        updateSpellResult(spellI + ' ＋ ' + spellF + ' 这个组合没有常用字哦，换一个试试～');
+        sndWrong(); mascotCheer();
+      }
+    } else {
+      if (!spellI || !spellM || !spellF) return;
+      const hit = window.PINYIN_SPELL.three.find(s => s.i === spellI && s.m === spellM && s.f === spellF);
+      if (hit) {
+        updateSpellResult(spellI + ' ＋ ' + spellM + ' ＋ ' + spellF + ' → <b>' + stripTone(hit.py) + '</b> · ' + hit.w + '（' + hit.py + '）');
+        sndCorrect(); mascotPraise();
+        speak(hit.w + '，' + hit.w + '。', 0.75);
+      } else {
+        updateSpellResult(spellI + ' ＋ ' + spellM + ' ＋ ' + spellF + ' 这个组合没有常用字哦，换一个试试～');
+        sndWrong(); mascotCheer();
+      }
+    }
+  }
+  document.querySelector('#py-spell').addEventListener('click', e => {
+    const b = e.target.closest('.spell-chip');
+    if (!b) return;
+    sndPop();
+    const row = b.dataset.row, k = b.dataset.k;
+    if (row === 'i') spellI = k;
+    else if (row === 'm') spellM = k;
+    else spellF = k;
+    renderSpellChips();
+    trySpell();
+  });
+  document.querySelectorAll('[data-spell]').forEach(b => b.addEventListener('click', () => {
+    sndPop(); spellMode = b.dataset.spell; renderSpell();
+  }));
   function openPinyin(key) {
     const d = PY[key];
     if (!d) return;

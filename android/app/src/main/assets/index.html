@@ -116,6 +116,44 @@
     <section id="view-pinyin" class="hidden">
       <div class="cat-tabs" id="py-tabs"></div>
       <div class="char-grid" id="py-grid"></div>
+
+      <!-- 声调学习 -->
+      <div id="py-tone" class="hidden">
+        <div class="tone-cards" id="tone-cards"></div>
+        <div class="info-card">
+          <h3>🤫 轻声：有的音节读得又轻又短，不标声调</h3>
+          <div class="word-chips" id="tone-light"></div>
+        </div>
+        <div class="game-area" style="margin-top:14px">
+          <div class="game-q" id="tone-q">👂 听一听，是第几声？点「听声音」开始</div>
+          <div style="text-align:center;margin-bottom:12px">
+            <button class="big-btn green" id="btn-tone-play" style="flex:0 0 auto;min-width:200px">▶️ 听声音</button>
+          </div>
+          <div class="opt-grid" id="tone-opts"></div>
+          <div class="score-line">
+            <span class="score-pill">✅ 答对 <b id="tone-score">0</b></span>
+            <span class="score-pill">⭐ 星星 <b id="tone-stars">0</b></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 拼读练习 -->
+      <div id="py-spell" class="hidden">
+        <div class="game-tabs">
+          <button class="game-card" data-spell="two" style="background:linear-gradient(160deg,#6DD5FA,#54A0FF)">两拼音节</button>
+          <button class="game-card" data-spell="three" style="background:linear-gradient(160deg,#55EFC4,#00B894)">三拼音节</button>
+        </div>
+        <div class="info-card">
+          <h3>🔗 选声母，再选韵母，听一听拼出来的音！</h3>
+          <div class="spell-rows">
+            <div class="spell-row" id="spell-i"></div>
+            <div class="spell-row" id="spell-m"></div>
+            <div class="spell-row" id="spell-f"></div>
+          </div>
+          <div class="spell-result" id="spell-result">👆 点上面的字母开始拼读</div>
+        </div>
+        <div id="spell-rules"></div>
+      </div>
     </section>
 
     <!-- 我的成就 -->

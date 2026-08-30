@@ -115,7 +115,55 @@ class CDP {
   await ev("document.querySelector('#btn-close-sheet').click()");
   await sleep(200);
 
-  // 7. 汉字详情拼音反向跳转（鱼 yú → yu）
+  // 7. 声调学习页
+  await ev("document.querySelector('#btn-close-pinyin').click()");
+  await sleep(200);
+  await ev("document.querySelectorAll('#py-tabs .cat-tab')[3].click()");
+  await sleep(400);
+  const toneCards = await ev("document.querySelectorAll('#tone-cards .tone-card').length");
+  const toneLight = await ev("document.querySelectorAll('#tone-light .chip').length");
+  check('声调页4张声调卡+3个轻声例', toneCards === 4 && toneLight === 3, '声调卡' + toneCards + ' 轻声' + toneLight);
+  // 听音辨调：点听声音不报错 + 盲选答案能出结果
+  await ev("document.querySelector('#btn-tone-play').click()");
+  await sleep(300);
+  await ev("document.querySelectorAll('#tone-opts .opt-btn')[0].click()");
+  await sleep(1200);
+  const toneQ = await ev("document.querySelector('#tone-q').textContent");
+  check('听音辨调流程可运行', toneQ.includes('第') || toneQ.includes('答案'), toneQ.slice(0, 24));
+
+  // 8. 拼读练习页：两拼
+  await ev("document.querySelectorAll('#py-tabs .cat-tab')[4].click()");
+  await sleep(400);
+  const spellChips = await ev("document.querySelectorAll('#spell-i .spell-chip').length + '|' + document.querySelectorAll('#spell-f .spell-chip').length");
+  check('拼读页声母+韵母芯片齐全', spellChips === '23|24', '声母|韵母=' + spellChips);
+  await ev("document.querySelector('.spell-chip[data-row=\"i\"][data-k=\"b\"]').click()");
+  await sleep(200);
+  await ev("document.querySelector('.spell-chip[data-row=\"f\"][data-k=\"a\"]').click()");
+  await sleep(300);
+  const spellRes = await ev("document.querySelector('#spell-result').textContent");
+  check('两拼 b+a 拼出 八', spellRes.includes('八') && spellRes.includes('ba'), spellRes.slice(0, 30));
+  // 无效组合提示
+  await ev("document.querySelector('.spell-chip[data-row=\"i\"][data-k=\"b\"]').click()");
+  await sleep(200);
+  await ev("document.querySelector('.spell-chip[data-row=\"f\"][data-k=\"ü\"]').click()");
+  await sleep(300);
+  const spellBad = await ev("document.querySelector('#spell-result').textContent");
+  check('无效组合有提示', spellBad.includes('没有常用字') || spellBad.includes('试试'), spellBad.slice(0, 30));
+  // 三拼
+  await ev("document.querySelector('[data-spell=\"three\"]').click()");
+  await sleep(300);
+  await ev("document.querySelector('.spell-chip[data-row=\"i\"][data-k=\"g\"]').click()");
+  await sleep(150);
+  await ev("document.querySelector('.spell-chip[data-row=\"m\"][data-k=\"u\"]').click()");
+  await sleep(150);
+  await ev("document.querySelector('.spell-chip[data-row=\"f\"][data-k=\"a\"]').click()");
+  await sleep(300);
+  const spell3 = await ev("document.querySelector('#spell-result').textContent");
+  check('三拼 g+u+a 拼出 瓜', spell3.includes('瓜') && spell3.includes('gua'), spell3.slice(0, 30));
+  const rules = await ev("document.querySelectorAll('#spell-rules .info-card').length");
+  check('拼读规则3张卡', rules === 3, '规则卡' + rules);
+
+  // 9. 汉字详情拼音反向跳转（鱼 yú → yu）
   await ev("document.querySelector('[data-nav=\"school\"]').click()");
   await sleep(300);
   await ev("document.querySelectorAll('#cat-tabs .cat-tab')[2].click()");

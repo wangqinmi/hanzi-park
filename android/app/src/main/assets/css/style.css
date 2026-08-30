@@ -198,6 +198,32 @@ button { font-family: inherit; cursor: pointer; }
 .py-card .zi { font-size: 30px; letter-spacing: 1px; }
 .py-card .pic { min-height: 46px; display: flex; align-items: center; justify-content: center; }
 .tone-chip { font-size: 20px; }
+.tone-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+.tone-card {
+  border: 4px solid #FFF; background: #FFFDF5; border-radius: 22px; padding: 10px 8px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 2px;
+  transition: transform .12s;
+}
+.tone-card:active { transform: scale(.95); }
+.tone-card svg { width: 110px; height: 74px; }
+.tone-card .tp { stroke: #E84393; stroke-width: 4; fill: none; stroke-linecap: round; }
+.tone-card .td { fill: #FF9F43; }
+.tone-card .tone-big { font-size: 30px; font-weight: 900; color: var(--ink); line-height: 1.1; }
+.tone-card .tone-word { font-size: 13px; color: #8D6E63; font-weight: 700; }
+.spell-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.spell-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.spell-row::before {
+  content: attr(data-label); font-weight: 900; color: #B8860B; font-size: 14px;
+  align-self: center; min-width: 44px;
+}
+.spell-chip { font-size: 18px; padding: 6px 13px; }
+.spell-chip.sel { background: #FFD93D; border-color: #F5A623; transform: translateY(-2px); }
+.spell-result {
+  text-align: center; font-size: 22px; font-weight: 900; color: #E84393;
+  background: #FFF3C4; border-radius: 16px; padding: 10px 14px; margin-top: 12px; min-height: 44px;
+  border: 2px dashed #F5C542; line-height: 1.5;
+}
+@media (max-width: 560px) { .tone-cards { grid-template-columns: 1fr 1fr; } }
 
 /* 象形演变 */
 .evolve { margin-top: 14px; background: #F0F8FF; border-radius: 20px; padding: 14px; text-align: center; }

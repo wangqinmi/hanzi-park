@@ -108,5 +108,43 @@ const out = {
   PINYIN_DATA: DATA,
 };
 
-fs.writeFileSync('js/pinyin-data.js', 'window.PINYIN_DATA = ' + JSON.stringify(DATA) + ';\nwindow.PINYIN_GROUPS = ' + JSON.stringify(out.PINYIN_GROUPS) + ';\nwindow.PINYIN_FINAL_SUB = ' + JSON.stringify(out.PINYIN_FINAL_SUB) + ';\n');
+// ===== 拼读表（例字保证发音准确） =====
+const SPELL = {
+  two: [
+    ['b','a','八','bā'], ['b','o','波','bō'], ['b','i','笔','bǐ'], ['b','u','不','bù'],
+    ['p','a','爬','pá'], ['p','i','皮','pí'], ['p','u','扑','pū'],
+    ['m','a','妈','mā'], ['m','i','米','mǐ'], ['m','u','木','mù'],
+    ['f','a','发','fā'], ['f','o','佛','fó'], ['f','u','父','fù'],
+    ['d','a','大','dà'], ['d','e','得','dé'], ['d','i','弟','dì'], ['d','u','读','dú'],
+    ['t','a','他','tā'], ['t','i','提','tí'], ['t','u','土','tǔ'],
+    ['n','a','拿','ná'], ['n','i','你','nǐ'], ['n','u','努','nǔ'],
+    ['l','a','拉','lā'], ['l','e','乐','lè'], ['l','i','里','lǐ'], ['l','u','路','lù'],
+    ['g','e','个','gè'], ['g','u','谷','gǔ'],
+    ['k','a','卡','kǎ'], ['k','u','哭','kū'],
+    ['h','a','哈','hā'], ['h','e','喝','hē'], ['h','u','虎','hǔ'],
+    ['j','i','鸡','jī'], ['q','i','七','qī'], ['x','i','西','xī'],
+    ['z','u','组','zǔ'], ['c','a','擦','cā'], ['c','u','粗','cū'], ['s','u','苏','sū'],
+    ['zh','a','眨','zhǎ'], ['zh','e','这','zhè'], ['zh','u','竹','zhú'],
+    ['ch','a','茶','chá'], ['ch','e','车','chē'], ['ch','u','出','chū'],
+    ['sh','a','沙','shā'], ['sh','e','蛇','shé'], ['sh','u','书','shū'],
+    ['r','e','热','rè'], ['r','u','入','rù'],
+    ['y','a','牙','yá'], ['w','a','娃','wá'], ['w','o','我','wǒ'], ['w','u','五','wǔ'],
+  ].map(([i, f, w, py]) => ({ i, f, w, py })),
+  three: [
+    ['g','u','a','瓜','guā'], ['g','u','o','国','guó'],
+    ['h','u','a','花','huā'], ['h','u','o','火','huǒ'],
+    ['j','i','a','家','jiā'], ['x','i','a','下','xià'],
+    ['x','i','ao','小','xiǎo'], ['q','i','ao','桥','qiáo'],
+    ['l','i','ang','两','liǎng'], ['n','i','ao','鸟','niǎo'],
+    ['k','u','o','阔','kuò'], ['d','u','o','多','duō'], ['t','u','o','脱','tuō'],
+    ['j','ü','an','卷','juǎn'], ['q','ü','an','全','quán'],
+  ].map(([i, m, f, w, py]) => ({ i, m, f, w, py })),
+};
+const RULES = [
+  { t: 'j q x 与 ü 相拼', d: 'j q x 真淘气，见到 ü 就摘掉两点：j+ü→ju（橘），q+ü→qu（去），x+ü→xu（许）', ex: ['橘', '去', '许'] },
+  { t: '标调规则', d: '有 a 标在 a，没 a 找 o e，i u 并列标在后：猫 māo、头 tóu、水 shuǐ、牛 niú', ex: ['猫', '头', '水', '牛'] },
+  { t: '三拼规则', d: '声母轻、介母快、韵母响：g-u-a→瓜，h-u-a→花', ex: ['瓜', '花'] },
+];
+
+fs.writeFileSync('js/pinyin-data.js', 'window.PINYIN_DATA = ' + JSON.stringify(DATA) + ';\nwindow.PINYIN_GROUPS = ' + JSON.stringify(out.PINYIN_GROUPS) + ';\nwindow.PINYIN_FINAL_SUB = ' + JSON.stringify(out.PINYIN_FINAL_SUB) + ';\nwindow.PINYIN_SPELL = ' + JSON.stringify(SPELL) + ';\nwindow.PINYIN_RULES = ' + JSON.stringify(RULES) + ';\n');
 console.log('声母:', Object.keys(INITIALS).length, '韵母:', Object.keys(FINALS).length, '整体认读:', Object.keys(WHOLE).length, '合计:', Object.keys(DATA).length);
