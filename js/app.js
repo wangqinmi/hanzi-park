@@ -164,7 +164,7 @@
   const mascotSay = (key, text, ms) => Mascot.show(key, text, ms);
 
   /* ---------- 视图导航 ---------- */
-  const VIEWS = ['home', 'school', 'picto', 'games', 'achieve'];
+  const VIEWS = ['home', 'school', 'picto', 'games', 'pinyin', 'achieve'];
   function nav(name) {
     for (const v of VIEWS) {
       const el = $('#view-' + v);
@@ -173,6 +173,7 @@
     ttsStop();
     if (name === 'school') renderSchool();
     if (name === 'achieve') renderAchieve();
+    if (name === 'pinyin') renderPinyin();
     if (name === 'picto') { renderPictoTab(); }
     if (name === 'games') { renderGames(); }
     window.scrollTo({ top: 0 });
@@ -239,6 +240,17 @@
     $('#cd-pic2-img').alt = d.w[0];
     $('#cd-zi').textContent = ch;
     $('#cd-py').textContent = d.p;
+    $('#cd-py').classList.add('tap-speak');
+    $('#cd-py').title = '点一点学这个拼音';
+    $('#cd-py').onclick = () => {
+      sndPop();
+      const key = findPYKey(stripTone(d.p));
+      if (key) {
+        $('#char-overlay').classList.add('hidden');
+        ttsStop();
+        openPinyin(key);
+      }
+    };
     $('#cd-cat').textContent = cat.icon + ' ' + cat.name + ' · 共' + strokesOf(ch) + '画';
     $('#cd-meaning').textContent = d.m;
     $('#cd-words').innerHTML = d.w.map(w => '<button class="chip" data-w="' + w + '">' + w + '</button>').join('');
@@ -711,6 +723,118 @@
     if (writeMode === 'demo') setWriteMode('trace');
     else if (writeMode === 'trace') wSkipStroke();
     else setWriteMode('trace');
+  });
+
+  /* ---------- 拼音乐园 ---------- */
+  const PY = window.PINYIN_DATA;
+  const PY_GROUPS = window.PINYIN_GROUPS;
+  const PY_FINAL_SUB = window.PINYIN_FINAL_SUB;
+  let pyTab = '声母';
+  const TONE_MAP = { 'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a', 'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e', 'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i', 'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o', 'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u', 'ǖ': 'ü', 'ǘ': 'ü', 'ǚ': 'ü', 'ǜ': 'ü' };
+  function stripTone(py) {
+    let o = '';
+    for (const ch of py) o += TONE_MAP[ch] || ch;
+    return o;
+  }
+  const WHOLE_KEYS = PY_GROUPS['整体认读'];
+  const FINAL_KEYS = PY_GROUPS['韵母'];
+  function findPYKey(base) {
+    if (WHOLE_KEYS.includes(base)) return base;
+    const sorted = [...FINAL_KEYS].sort((a, b) => b.length - a.length);
+    for (const f of sorted) {
+      if (base.endsWith(f)) return f;
+      if (base.endsWith(f.replace('ü', 'u')) && f.includes('ü')) return f;
+      if (f === 'ün' && base.endsWith('un')) {
+        const pre = base.slice(0, -2);
+        if (pre && 'jqxy'.includes(pre[pre.length - 1])) return f;
+      }
+    }
+    return null;
+  }
+  function pySpeakText(key) {
+    const d = PY[key];
+    if (!d) return '';
+    return d.rw + '，' + d.ph + '。' + d.ex.map(e => e.w).join('。') + '。';
+  }
+  function pyCard(k) {
+    const d = PY[k];
+    return '<button class="char-card py-card" data-py="' + k + '">' +
+      '<span class="pic"><img src="img/pinyin/' + k + '.svg" style="width:40px;height:40px;vertical-align:middle"></span>' +
+      '<div class="zi">' + k + '</div>' +
+      '<div class="py">' + d.read + '</div></button>';
+  }
+  function renderPinyin() {
+    const tabs = $('#py-tabs');
+    tabs.innerHTML = Object.keys(PY_GROUPS).map(g =>
+      '<button class="cat-tab' + (g === pyTab ? ' active' : '') + '" data-g="' + g + '">' + g +
+      ' <span style="opacity:.6">' + PY_GROUPS[g].length + '</span></button>').join('');
+    tabs.querySelectorAll('.cat-tab').forEach(b => b.addEventListener('click', () => {
+      sndPop(); pyTab = b.dataset.g; renderPinyin();
+    }));
+    const grid = $('#py-grid');
+    if (pyTab === '韵母') {
+      grid.innerHTML = Object.entries(PY_FINAL_SUB).map(([sub, keys]) =>
+        '<div class="py-group-head" style="grid-column:1/-1">' + sub + '</div>' +
+        keys.map(pyCard).join('')).join('');
+    } else {
+      grid.innerHTML = PY_GROUPS[pyTab].map(pyCard).join('');
+    }
+    grid.querySelectorAll('.py-card').forEach(b => b.addEventListener('click', () => {
+      sndPop(); openPinyin(b.dataset.py);
+    }));
+  }
+  function openPinyin(key) {
+    const d = PY[key];
+    if (!d) return;
+    $('#py-zi').textContent = key;
+    $('#py-read').textContent = d.read;
+    $('#py-cat').textContent = '🔤 ' + d.cat;
+    $('#py-img').src = 'img/pinyin/' + key + '.svg';
+    $('#py-img-cap').textContent = d.rw + '（' + d.read + '）';
+    $('#py-tip').textContent = d.tip;
+    $('#py-tip').onclick = () => speak(d.tip, 0.8);
+    const tonesBox = $('#py-tones');
+    if (d.tones && d.tones.length) {
+      $('#py-tones-title').textContent = '🎵 四声调：点一点听发音（' + d.read + '）';
+      tonesBox.innerHTML = d.tones.map(t =>
+        '<button class="chip tone-chip" data-w="' + t.w + '">' + t.t +
+        ' <span style="opacity:.6">' + t.w + '</span></button>').join('');
+      tonesBox.querySelectorAll('.tone-chip').forEach(b => b.addEventListener('click', () => {
+        sndPop(); speak(b.dataset.w + '，' + b.dataset.w + '。', 0.78);
+      }));
+    } else {
+      $('#py-tones-title').textContent = '🎵 声调：声母本身不标调，和韵母拼在一起才标调哦';
+      tonesBox.innerHTML = '<span style="color:#8D6E63;font-weight:700">例字：' + d.ex.map(e => e.w).join('、') + '</span>';
+    }
+    $('#py-ex').innerHTML = d.ex.map(e =>
+      '<button class="chip" data-w="' + e.w + '">' + e.w +
+      ' <span style="opacity:.55">' + e.py + '</span></button>').join('');
+    $('#py-ex').querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      sndPop();
+      const w = b.dataset.w;
+      if (CD[w]) {
+        $('#pinyin-overlay').classList.add('hidden');
+        ttsStop();
+        openChar(w);
+      } else {
+        speak(w + '，' + w + '。', 0.78);
+      }
+    }));
+    $('#pinyin-overlay').classList.remove('hidden');
+    warmTts(pySpeakText(key));
+  }
+  $('#btn-py-read').addEventListener('click', () => {
+    speak(pySpeakText($('#py-zi').textContent), 0.78);
+  });
+  $('#btn-close-pinyin').addEventListener('click', () => {
+    $('#pinyin-overlay').classList.add('hidden');
+    ttsStop();
+  });
+  $('#pinyin-overlay').addEventListener('click', e => {
+    if (e.target === $('#pinyin-overlay')) {
+      $('#pinyin-overlay').classList.add('hidden');
+      ttsStop();
+    }
   });
 
   /* ---------- 方法一：图画变变变 ---------- */

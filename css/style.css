@@ -190,6 +190,14 @@ button { font-family: inherit; cursor: pointer; }
 .tip-line { font-size: 15px; font-weight: 700; color: #6C5CE7; margin-top: 8px; }
 .tap-speak { cursor: pointer; border-bottom: 2px dashed rgba(232, 67, 147, .4); border-radius: 4px; transition: opacity .1s; }
 .tap-speak:active { opacity: .6; }
+.py-group-head {
+  font-weight: 900; color: #35502B; margin: 8px 4px 2px; font-size: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.py-group-head::after { content: ''; flex: 1; border-top: 2px dashed #B7EFA4; }
+.py-card .zi { font-size: 30px; letter-spacing: 1px; }
+.py-card .pic { min-height: 46px; display: flex; align-items: center; justify-content: center; }
+.tone-chip { font-size: 20px; }
 
 /* 象形演变 */
 .evolve { margin-top: 14px; background: #F0F8FF; border-radius: 20px; padding: 14px; text-align: center; }

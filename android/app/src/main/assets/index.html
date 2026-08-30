@@ -40,6 +40,7 @@
         <button class="menu-card mc-a" data-nav="school"><span class="big">🎓</span><div><div class="ttl">识字学堂</div><div class="sub">学读 · 学写 · 懂意思</div></div></button>
         <button class="menu-card mc-b" data-nav="picto"><span class="big">🖼️</span><div><div class="ttl">图画变变变</div><div class="sub">趣味方法① 看图联想识字</div></div></button>
         <button class="menu-card mc-c" data-nav="games"><span class="big">🎮</span><div><div class="ttl">闯关大冒险</div><div class="sub">趣味方法② 玩游戏学汉字</div></div></button>
+        <button class="menu-card mc-e" data-nav="pinyin"><span class="big">🔤</span><div><div class="ttl">拼音乐园</div><div class="sub">声母·韵母·整体认读</div></div></button>
         <button class="menu-card mc-d" data-nav="achieve"><span class="big">🏆</span><div><div class="ttl">我的成就</div><div class="sub">星星徽章领不停</div></div></button>
       </nav>
     </section>
@@ -111,6 +112,12 @@
       </div>
     </section>
 
+    <!-- 拼音乐园 -->
+    <section id="view-pinyin" class="hidden">
+      <div class="cat-tabs" id="py-tabs"></div>
+      <div class="char-grid" id="py-grid"></div>
+    </section>
+
     <!-- 我的成就 -->
     <section id="view-achieve" class="hidden">
       <div class="game-area">
@@ -177,9 +184,42 @@
     </div>
   </div>
 
+  <!-- 拼音详情弹层 -->
+  <div class="overlay hidden" id="pinyin-overlay">
+    <div class="sheet" id="pinyin-sheet">
+      <button class="close" id="btn-close-pinyin">✕</button>
+      <div class="char-hero">
+        <div class="pic-frames">
+          <div class="pic-frame pic-img" style="width:150px;height:150px">
+            <img id="py-img" src="" alt="" style="width:96px;height:96px">
+            <span class="pic-cap" id="py-img-cap">图片</span>
+          </div>
+        </div>
+        <div class="main">
+          <div class="zi-big" id="py-zi">b</div>
+          <div class="py-big" id="py-read">bō</div>
+          <div class="picat" id="py-cat">声母</div>
+        </div>
+      </div>
+      <div class="fn-row">
+        <button class="fn-btn fn-read" id="btn-py-read">🔊 听一听</button>
+      </div>
+      <div class="info-card">
+        <h3 id="py-tones-title">🎵 四声调：点一点听发音</h3>
+        <div class="word-chips" id="py-tones"></div>
+      </div>
+      <div class="info-card">
+        <h3>💡 怎么记住它？</h3>
+        <div class="meaning tap-speak" id="py-tip"></div>
+        <div class="word-chips" id="py-ex"></div>
+      </div>
+    </div>
+  </div>
+
   <canvas id="confetti-canvas"></canvas>
 
   <script src="js/data.js"></script>
+  <script src="js/pinyin-data.js"></script>
   <script src="js/mascots.js"></script>
   <script src="js/strokes.js"></script>
   <script src="js/app.js"></script>
