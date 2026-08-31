@@ -221,6 +221,45 @@ public class TtsBridge implements TextToSpeech.OnInitListener {
         }).start();
     }
 
+    /** 播放打包在 assets/audio/ 里的预合成语音（零延迟） */
+    @JavascriptInterface
+    public void playBundled(String name) {
+        if (name == null || name.isEmpty()) return;
+        final int gen = generation.incrementAndGet();
+        stopPlayer();
+        if (ttsReady) tts.stop();
+        try {
+            android.content.res.AssetFileDescriptor afd = ctx.getAssets().openFd("audio/" + name);
+            final MediaPlayer mp = new MediaPlayer();
+            mp.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build());
+            mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            afd.close();
+            mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer m) {
+                    m.release();
+                    if (player == m) player = null;
+                }
+            });
+            mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer m, int what, int extra) {
+                    m.release();
+                    if (player == m) player = null;
+                    return true;
+                }
+            });
+            mp.prepare();
+            mp.start();
+            player = mp;
+        } catch (Exception e) {
+            throw new RuntimeException("bundled-audio-missing");
+        }
+    }
+
     @JavascriptInterface
     public void stop() {
         generation.incrementAndGet();

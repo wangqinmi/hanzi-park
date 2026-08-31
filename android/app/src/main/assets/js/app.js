@@ -108,13 +108,33 @@
   }
   function ttsStop() {
     try {
+      if (webAudioEl) { webAudioEl.pause(); }
       if (window.AndroidTTS) { AndroidTTS.stop(); return; }
       speechSynthesis.cancel();
     } catch (e) {}
   }
+  // 网页端打包语音播放（Audio 元素，file:// 下也可用）
+  let webAudioEl = null;
+  function playBundledWeb(name) {
+    try {
+      if (!webAudioEl) webAudioEl = new Audio();
+      webAudioEl.src = 'audio/' + name;
+      const p = webAudioEl.play();
+      if (p && p.catch) p.catch(() => {});
+      return true;
+    } catch (e) { return false; }
+  }
   let ttsWarned = false;
   function speak(text, rate) {
     try {
+      // 打包预合成语音优先：零延迟、真人级音色、离线可用
+      const bundled = window.AUDIO_MANIFEST && window.AUDIO_MANIFEST[text];
+      if (bundled) {
+        if (window.AndroidTTS && AndroidTTS.playBundled) {
+          try { AndroidTTS.playBundled(bundled); return true; } catch (e) {}
+        }
+        if (playBundledWeb(bundled)) return true;
+      }
       if (window.AndroidTTS) {
         AndroidTTS.speak(text, rate || 0.72, 1.15);
         if (!ttsWarned) {
@@ -150,7 +170,9 @@
   function warmTts() {
     if (!window.AndroidTTS || !AndroidTTS.warm) return;
     for (let i = 0; i < arguments.length; i++) {
-      try { AndroidTTS.warm(String(arguments[i]), 0.72); } catch (e) {}
+      const t = String(arguments[i]);
+      if (window.AUDIO_MANIFEST && window.AUDIO_MANIFEST[t]) continue; // 已打包语音，无需预合成
+      try { AndroidTTS.warm(t, 0.72); } catch (e) {}
     }
   }
 
